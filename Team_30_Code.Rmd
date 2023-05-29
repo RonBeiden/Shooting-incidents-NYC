@@ -1,0 +1,261 @@
+---
+title: "FinalProjectTeam30"
+author: "Team 30 - Ron Beiden, Ori Flomin"
+date: "2023-05-24"
+output: pdf_document
+---
+
+**In order to get our  end to end code analysis, run the chunks by the given order **
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+ # hide source code in the document
+```
+
+##### Loading libraries
+
+```{r load-packages, message = FALSE , include=FALSE,  warning = FALSE}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(tidymodels)
+library(randomForest)
+library(caret)
+library(e1071)
+library(nnet)
+library(knitr)
+library(htmltools)
+```
+
+
+# 1.Loading & Cleaning the Data 
+
+##### Please upload your data here
+```{r}
+# Load the data and filter to cases from 2011 and after
+set.seed(1116)
+setwd("C:/Users/1/Desktop/Data_proj/")
+final_year <- read.csv("NYPD_Shooting_Incident_Data_2022.csv")
+shootings_data <- read.csv("NYPD Shooting Incident - Data 2006-2021.csv") %>%
+  mutate(OCCUR_DATE = as.Date(OCCUR_DATE, "%m/%d/%Y")) %>% # Convert OCCUR_DATE column to date format
+  filter(OCCUR_DATE >= as.Date("2011-01-01")) # Filter to shootings on or after January 1st, 2011
+
+# Filter data for incidents from 2011 onwards
+shootings_data <- shootings_data[shootings_data$OCCUR_DATE >= "2011-01-01", ]
+```
+
+##### Handling relevant columns
+```{r}
+# Filtering the age range into numbers 1-5
+shootings_data_set <-function(data){
+  data %>% 
+  filter(!is.na(PERP_RACE) & PERP_RACE != "UNKNOWN") %>% 
+  mutate(PERP_AGE_GROUP_NEW = case_when(
+    PERP_AGE_GROUP == "<18" ~ 1,
+    PERP_AGE_GROUP == "18-24" ~ 2,
+    PERP_AGE_GROUP == "25-44" ~ 3,
+    PERP_AGE_GROUP == "45-64" ~ 4,
+    PERP_AGE_GROUP == "65+" ~ 5,
+    TRUE ~ NA_real_
+  ),
+  VIC_AGE_GROUP_NEW = case_when(
+    VIC_AGE_GROUP == "<18" ~ 1,
+    VIC_AGE_GROUP == "18-24" ~ 2,
+    VIC_AGE_GROUP == "25-44" ~ 3,
+    VIC_AGE_GROUP == "45-64" ~ 4,
+    VIC_AGE_GROUP == "65+" ~ 5,
+    TRUE ~ NA_real_
+  )) %>%
+  na.omit()
+}
+shootings_data_train <- shootings_data_set(shootings_data)
+shootings_data_train$OCCUR_TIME_HOUR <- format(as.POSIXct(shootings_data_train$OCCUR_TIME, format="%H:%M:%S"), format="%H")
+shootings_data_test <- shootings_data_set(final_year)
+shootings_data_test$OCCUR_TIME_HOUR <- format(as.POSIXct(shootings_data_test$OCCUR_TIME, format="%H:%M:%S"), format="%H")
+```
+
+```{r}
+shootings_data_test <- shootings_data_test %>%
+  select(-INCIDENT_KEY, -OCCUR_DATE, -STATISTICAL_MURDER_FLAG) 
+shootings_data_train <- shootings_data_train %>%
+  select(-INCIDENT_KEY, -OCCUR_DATE, -STATISTICAL_MURDER_FLAG) 
+```
+
+
+# 2.Data Analysis 
+
+##### Summary Statistic
+
+```{r, fig.show="hold", out.width="70%", fig.height=3}
+shootings_by_boro <- shootings_data_train %>%
+  group_by(BORO) %>%
+  summarise(count = n())
+ggplot(shootings_by_boro, aes(x=BORO, y=count, fill=BORO)) +
+  geom_bar(stat="identity") +
+  labs(title="Number of Shootings by Borough", x="Borough", y="Count") +
+  scale_fill_manual(values=c("#0072B2", "#E69F00", "#009E73", "#F0E442", "#CC79A7")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+```{r, fig.show="hold", out.width="50%", fig.height=3}
+shootings_plot <- function(race_filter = NA, range, step, black_only = FALSE) {
+  if (black_only) {
+    shootings_data_train_mod <- shootings_data_train[shootings_data_train$PERP_RACE == "BLACK",]
+  }
+  
+  else if (!missing(race_filter)) {
+    shootings_data_train_mod <- shootings_data_train %>%
+      filter(PERP_RACE != race_filter) %>%
+      filter(PERP_RACE != "AMERICAN INDIAN/ALASKAN NATIVE")
+  }
+  shootings_data_train_mod <- shootings_data_train_mod %>%
+    filter(VIC_AGE_GROUP_NEW != 5) %>%
+    filter(PERP_AGE_GROUP_NEW != 5)
+  ggplot(shootings_data_train_mod, aes(x = PERP_AGE_GROUP_NEW)) + 
+    geom_bar(aes(fill = factor(VIC_AGE_GROUP_NEW)), position = "dodge", width = 0.5) + 
+    facet_wrap(~PERP_RACE, ncol = 2, scales = "free_x") +
+    labs(x = "Perpetrator Age Group", y = "Count", fill = "Victim Age Group") +
+    theme_bw() +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          panel.border = element_blank(), axis.line = element_line(colour = "black"),
+          axis.text.x = element_text(angle = -90, hjust = 0)) +
+    scale_fill_discrete(name = "Victim Age Group", labels = c("<18", "18-24", "25-44", "45-64")) +
+    scale_x_continuous(name = "Perpetrator Age Group", breaks = c(1, 2, 3, 4),
+                       labels = c("<18", "18-24", "25-44", "45-64")) +
+    scale_y_continuous(breaks = seq(0, 1250, by = step)) +
+    theme(legend.position = "bottom") +
+    labs(title = "Distribution of Perpetrator and Victim Age Groups by Race",
+         subtitle = "Data from shootings in NYC between 2011-2021") +
+    coord_cartesian(ylim = c(0, range), expand = FALSE)
+  
+}
+```
+```{r, fig.show="hold", out.width="50%", fig.height=4}
+shootings_plot(NA, 1250, 250, TRUE)
+shootings_plot("BLACK", 300, 100)
+```
+
+
+```{r}
+# Heatmap of the geographical locations of incidents based on longitude and latitude
+library(leaflet)
+library(leaflet.extras)
+
+data1c <- shootings_data_train[c("Latitude", "Longitude")]
+data1c <- na.omit(data1c)
+
+incidentsAREA <- leaflet() %>%
+  setView(lng = -73.9, lat = 40.7, zoom = 11) %>%
+  addProviderTiles("Stamen.Terrain", options = providerTileOptions(minZoom = 2)) %>%
+  addHeatmap(data = data1c)
+```
+
+
+### Creating a multi-class classification random forest model to predict the characteristics and patterns of shooting incidents
+
+```{r, message=FALSE}
+### Creating a classification model 
+
+# Identify common columns between shootings_data_train and shootings_data_test
+common_columns <- intersect(names(shootings_data_train), names(shootings_data_test))
+
+# Refactor columns in shootings_data_test to match the data types of shootings_data_train
+for (col in common_columns) {
+  col_type_train <- typeof(shootings_data_train[[col]])
+  col_type_test <- typeof(shootings_data_test[[col]])
+
+  # Check if the data types are different and refactor if needed
+  if (col_type_train != col_type_test) {
+    shootings_data_test[[col]] <- as(shootings_data_test[[col]], col_type_train)
+  }
+}
+
+shootings_data_train <- shootings_data_train  %>%
+select(PERP_RACE, PERP_AGE_GROUP, BORO, VIC_AGE_GROUP, VIC_RACE, Latitude, Longitude, BORO)
+  
+shootings_data_test <- shootings_data_test %>%
+  select(PERP_RACE, PERP_AGE_GROUP, BORO, VIC_AGE_GROUP, VIC_RACE, Latitude, Longitude, BORO)
+
+performance <- function(predicator, reference) {
+  col_name <- as.character(substitute(predicator))
+  reference <- as.character(substitute(reference))
+  
+  shootings_data_train[[col_name]] <- as.factor(shootings_data_train[[col_name]])
+  rf_formula <- as.formula(paste(col_name, "~ PERP_RACE + PERP_AGE_GROUP + BORO + VIC_AGE_GROUP + VIC_RACE + Latitude + Longitude"))
+  rf_model1 = randomForest(rf_formula, data = shootings_data_train, ntree = 100)
+ 
+  importances <- importance(rf_model1)
+  sorted_importance <- sort(importances, decreasing = TRUE)
+  top_10_features <- head(names(sorted_importance), 10)
+  predictors <- c(top_10_features, col_name)
+  
+  shootings_data_train[[col_name]] <- factor(shootings_data_train[[col_name]], ordered = FALSE)
+  shootings_data_train[[col_name]] <- relevel(shootings_data_train[[col_name]], ref = reference)
+  
+  model_output <- capture.output(shootings_model <- multinom(rf_formula, data = shootings_data_train))
+  #rm(list = ls())
+
+  test_predict <- predict(shootings_model, newdata = shootings_data_test, "class") %>%
+    bind_cols(shootings_data_test %>% select(col_name)) %>%
+  rename(.pred_class = 1)
+  
+  test_predict$.pred_class <- as.character(test_predict$.pred_class)
+  
+  levels(test_predict$.pred_class) <- levels(shootings_data_test[[col_name]])
+  
+
+  tab1 <- table(shootings_data_test[[col_name]], test_predict$.pred_class)
+
+  accuracy <- sum(diag(tab1)) / sum(tab1)
+  precision <- diag(tab1) / colSums(tab1)
+  recall <- diag(tab1) / rowSums(tab1)
+  f1_score <- 2 * precision * recall / (precision + recall)
+  
+  # Get the maximum values (assuming binary classification)
+  accuracy <- max(accuracy, na.rm = TRUE)
+  precision <- max(precision, na.rm = TRUE)
+  recall <- max(recall, na.rm = TRUE)
+  f1_score <- max(f1_score, na.rm = TRUE)
+
+  # Print the results
+  cat(sprintf("Accuracy: %.2f\n", accuracy))
+  cat(sprintf("Precision: %.2f\n", precision))
+  cat(sprintf("Recall: %.2f\n", recall))
+  cat(sprintf("F1 Score: %.2f\n", f1_score))
+  
+  return(rf_model1)
+}
+```
+
+### Calculating and displaying the likelihood probabilities of the shooting incidents
+
+```{r, message=FALSE}
+calculate_mean <- function(rf_model2, varr) {
+  
+  predict_probs <- predict(rf_model2, type = "prob")
+  column <- match(varr, colnames(predict_probs))
+
+    if (is.na(column)) {
+    stop("var not found in the matrix.")
+  }
+  
+  values <- predict_probs[, column]
+  numeric_values <- as.numeric(values)
+  mean_value <- mean(numeric_values, na.rm = TRUE)
+  
+  return(mean_value)
+}
+# Displaying data on the probability of different groups being the race of the perpetrator or the borough where the incidents occur
+
+model_input <- performance(BORO, "BRONX")
+calculate_mean(model_input, "BRONX")
+calculate_mean(model_input, "BROOKLYN")
+calculate_mean(model_input, "MANHATTAN")
+
+model_input <- performance(PERP_RACE, "BLACK")
+calculate_mean(model_input, "BLACK")
+calculate_mean(model_input, "WHITE")
+calculate_mean(model_input, "WHITE HISPANIC")
+```
