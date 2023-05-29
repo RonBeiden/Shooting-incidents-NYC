@@ -11,50 +11,27 @@ over the past decade
 The features in the data are described below:
 
 #### General Details
-+------------------------+--------+-------------------------------------------------------------------+
+
 | Column Name            | Type   | Description                                                       |
 |------------------------|--------|-------------------------------------------------------------------|
 | INCIDENT_KEY           | Int    | Randomly generated persistent ID for each arrest                  |
-+------------------------+--------+-------------------------------------------------------------------+
 | OCCUR_DATE             | Date   | Exact date of the shooting incident                               |
-+------------------------+--------+-------------------------------------------------------------------+
 | OCCUR_TIME             | Chr    | Exact time of the shooting incident                               |
-+------------------------+--------+-------------------------------------------------------------------+
-| BORO                   | Chr 	  | Borough where the shooting incident occurred                      |
-+------------------------+--------+-------------------------------------------------------------------+
+| BORO                   | Chr    | Borough where the shooting incident occurred                      |
 | PRECINCT               | Int    | Precinct where the shooting incident occurred                     |
-+------------------------+--------+-------------------------------------------------------------------+
 | JURISDICTION_CODE      | Int    | Jurisdiction where the shooting incident occurred                 |
-+------------------------+--------+-------------------------------------------------------------------+
 | LOCATION_DESC          | Chr    | Location of the shooting incident                                 |
-+------------------------+--------+-------------------------------------------------------------------+
-| STATISTICAL_MURDER_FLAG| lgl    | Indicates if the shooting resulted in the victim's death,	      |
-|						 |		  | counted as a murder												  |
-+------------------------+--------+-------------------------------------------------------------------+
+| STATISTICAL_MURDER_FLAG| lgl    | Indicates if the shooting resulted in the victim's death, counted as a murder |
 | PERP_AGE_GROUP         | chr    | Perpetrator's age group within a category                         |
-+------------------------+--------+-------------------------------------------------------------------+
 | PERP_SEX               | chr    | Perpetrator's sex description                                     |
-+------------------------+--------+-------------------------------------------------------------------+
 | PERP_RACE              | chr    | Perpetrator's race description                                    |
-+------------------------+--------+-------------------------------------------------------------------+
 | VIC_AGE_GROUP          | chr    | Victim's age group within a category                              |
-+------------------------+--------+-------------------------------------------------------------------+
-| VIC_SEX                | chr	  | Victim's sex description                                          |
-+------------------------+--------+-------------------------------------------------------------------+
-| VIC_RACE               | chr 	  | Victim's race description                                         |
-+------------------------+--------+-------------------------------------------------------------------+
-| X_COORD_CD             | chr    | Midblock X-coordinate for New York State Plane Coordinate System, |
-|						 |		  | Long Island														  |
-+------------------------+--------+-------------------------------------------------------------------+
-| Y_COORD_CD             | chr    | Midblock Y-coordinate for New York State Plane Coordinate System, |
-|						 |		  | Long Island Zone, NAD 83, units feet (FIPS 3104)                  |
-+------------------------+--------+-------------------------------------------------------------------+
-| Latitude               | chr    | Latitude coordinate for Global Coordinate System, WGS 1984,       |
-|                        |        | decimal degrees (EPSG 4326)                                       |
-+------------------------+--------+-------------------------------------------------------------------+
-| Longitude              | dbl    | Longitude coordinate for Global Coordinate System, WGS 1984,      |
-|                        |        | decimal degrees (EPSG 4326)                                       |
-+------------------------+--------+-------------------------------------------------------------------+
+| VIC_SEX                | chr    | Victim's sex description                                          |
+| VIC_RACE               | chr    | Victim's race description                                         |
+| X_COORD_CD             | chr    | Midblock X-coordinate for New York State Plane Coordinate System, Long Island |
+| Y_COORD_CD             | chr    | Midblock Y-coordinate for New York State Plane Coordinate System, Long Island Zone |
+| Latitude               | chr    | Latitude coordinate for Global Coordinate System, WGS 1984        |
+| Longitude              | dbl    | Longitude coordinate for Global Coordinate System, WGS 1984       |
 
 
 # Data analysis review
@@ -87,8 +64,12 @@ The features in the data are described below:
 
 #### 4. Test the Model
 
--   Predict on the testing data set
+- Predict on the testing data set
 
--   Calculation of Confusion Matrix to determine Accuracy, Precision, Recall, and F1 Score
+- Calculation of Confusion Matrix to determine Accuracy, Precision, Recall, and F1 Score
 
--   Calculation of probabilities of characteristics by the model
+- Calculation of probabilities of characteristics by the model
+
+
+### Results
+The project aims to provide insights into the characteristics and patterns of shooting incidents in New York City. The analysis includes summary statistics, initial analysis findings, and visualizations to explore relationships between variables. Additionally, a multi-class classification random forest model is built to predict incident characteristics and patterns.
