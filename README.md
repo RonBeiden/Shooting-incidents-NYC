@@ -1,8 +1,8 @@
 # SISE2601 Project data description
-================
-Team 30:
-Ron Beiden 206628505
-Ori Flomin 318156775
+
+## Team Members
+- Ron Beiden (206628505)
+- Ori Flomin (318156775)
 
 This Markdown file describes the data folder structure and organization. 
 Our research is based on two databases of shooting incidents that occurred in New York City 
