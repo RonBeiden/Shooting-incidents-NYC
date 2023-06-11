@@ -97,7 +97,43 @@ ggplot(shootings_by_boro, aes(x=BORO, y=count, fill=BORO)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+```{r}
+library(ggplot2)
 
+# Group the data by race and count the occurrences for perpetrators, excluding null and empty values
+perp_race_counts <- shootings_data %>%
+  filter(!is.na(PERP_RACE) & PERP_RACE != "") %>%
+  group_by(PERP_RACE) %>%
+  summarize(count = n())
+
+# Group the data by race and count the occurrences for victims, excluding null and empty values
+vic_race_counts <- shootings_data %>%
+  filter(!is.na(VIC_RACE) & VIC_RACE != "") %>%
+  group_by(VIC_RACE) %>%
+  summarize(count = n())
+
+# Combine the perpetrator and victim race counts into a single data frame, omitting null and empty values
+race_counts <- rbind(
+  data.frame(Race = perp_race_counts$PERP_RACE, Role = "Perpetrator", Count = perp_race_counts$count),
+  data.frame(Race = vic_race_counts$VIC_RACE, Role = "Victim", Count = vic_race_counts$count)
+) %>%
+  na.omit()
+
+# Create the bar chart with rotated x-axis labels
+ggplot(race_counts, aes(x = Race, y = Count, fill = Role)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Race", y = "Count", fill = "Role") +
+  ggtitle("Race Distribution of Perpetrators and Victims in Shooting Incidents") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+ggplot(race_counts, aes(x = Race, y = Count, fill = Role)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(x = "Race", y = "Count", fill = "Role") +
+  ggtitle("Race Distribution of Perpetrators and Victims in Shooting Incidents") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
 
 ```{r, fig.show="hold", out.width="50%", fig.height=3}
 shootings_plot <- function(race_filter = NA, range, step, black_only = FALSE) {
@@ -114,7 +150,7 @@ shootings_plot <- function(race_filter = NA, range, step, black_only = FALSE) {
     filter(VIC_AGE_GROUP_NEW != 5) %>%
     filter(PERP_AGE_GROUP_NEW != 5)
   ggplot(shootings_data_train_mod, aes(x = PERP_AGE_GROUP_NEW)) + 
-    geom_bar(aes(fill = factor(VIC_AGE_GROUP_NEW)), position = "dodge", width = 0.5) + 
+    geom_bar(aes(fill = factor(PERP_AGE_GROUP_NEW)), position = "dodge", width = 0.5) + 
     facet_wrap(~PERP_RACE, ncol = 2, scales = "free_x") +
     labs(x = "Perpetrator Age Group", y = "Count", fill = "Victim Age Group") +
     theme_bw() +
